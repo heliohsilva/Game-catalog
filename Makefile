@@ -1,6 +1,7 @@
 .PHONY: all clean test
 
 all:
+	@if [ ! -f env/.env ]; then cp env/.env.example env/.env && echo "Created env/.env from env/.env.example"; fi
 	docker compose -f env/docker-compose.yml build
 	docker compose -f env/docker-compose.yml up -d
 

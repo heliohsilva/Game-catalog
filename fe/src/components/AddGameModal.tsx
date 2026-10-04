@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { Game, Platform, PLATFORMS, PLATFORM_SUBCATEGORIES, PlatformInfo } from '../types/game';
+import { getApiUrl } from '../utils/api';
 
 interface AddGameModalProps {
   isOpen: boolean;
@@ -70,7 +71,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
     try {
       let res = await fetch(`/api/hltb?q=${encodeURIComponent(title.trim())}`);
       if (!res.ok) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+        const apiUrl = getApiUrl();
         res = await fetch(`${apiUrl}/hltb?q=${encodeURIComponent(title.trim())}`);
       }
       const data = await res.json();

@@ -15,7 +15,7 @@ A centralized, distraction-free game collection catalog designed to unify all yo
 - **Hyprland / Waybar Aesthetic**: Clean, minimalist frosted-glass UI with static tactile micro-texture, high-legibility typography, and no distracting animations.
 - **Omnibar Quick Search**: Instant search and filtering with `Ctrl+K` or `/`.
 - **Theme Engine**: Switch between 10+ themes including Catppuccin Mocha, Tokyo Night, Nord, Gruvbox, Rose Pine, Dracula, and Cyberpunk.
-- **Self-Contained & Persistent**: Powered by a high-performance Go backend and SQLite database mounted under `data/`, persisting your catalog across container builds without saving user data to git.
+- **Homelab & Self-Hosting Ready**: Single-port deployment (`3000`), automatic environment initialization, internal API proxy, and persistent SQLite storage.
 
 ---
 
@@ -32,41 +32,41 @@ game-catalog/
 
 - **Frontend**: [Next.js](https://nextjs.org/) (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons, Vitest.
 - **Backend API**: [Go](https://golang.org/) (Gin-Gonic), SQLite with foreign keys and WAL mode.
+- **Reverse Proxy**: Built-in Next.js App Router proxy (`/api/v1/*` ➔ `http://api:8080/api/v1/*`), eliminating CORS issues and keeping the raw database API isolated inside the Docker network.
 - **Containerization**: Docker & Docker Compose with multi-stage builds.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Homelab Deployment
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
 - *Optional for local development:* Go 1.22+, Node.js 20+
 
-### Run with Make
-
-Start the entire environment (builds images and launches containers in background):
+### 1. Clone & Start
 
 ```bash
+git clone https://github.com/<your-username>/game-catalog.git
+cd game-catalog
 make
 ```
 
-Once running:
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Backend API:** [http://localhost:8080/api/v1](http://localhost:8080/api/v1)
-- **Health Check:** [http://localhost:8080/health](http://localhost:8080/health)
+`make` will automatically initialize `env/.env` from `env/.env.example` if it doesn't exist, build both containers, and start them in the background.
+
+### 2. Access the Application
+
+- **Locally on the host:** [http://localhost:3000](http://localhost:3000)
+- **From another PC or phone on your LAN:** `http://<your-homelab-ip>:3000`
+- **Behind a Reverse Proxy (Nginx, Caddy, Traefik, Tailscale, Cloudflare Tunnel):** Point your proxy directly to port `3000`.
 
 ### Stop & Clean Up
-
-Stop containers and remove local build artifacts:
 
 ```bash
 make clean
 ```
 
 ### Run Tests
-
-Run backend unit/integration tests and frontend test suites:
 
 ```bash
 make test
@@ -89,29 +89,31 @@ You can configure platforms and launchers either via the UI or directly through 
 
 ```bash
 # List all platforms and subcategories with game counts
-curl http://localhost:8080/api/v1/platforms
+curl http://localhost:3000/api/v1/platforms
 
 # Add a new platform
-curl -X POST http://localhost:8080/api/v1/platforms \
+curl -X POST http://localhost:3000/api/v1/platforms \
   -H "Content-Type: application/json" \
   -d '{"name": "Nintendo DS", "subcategories": ["Cartridge", "R4"]}'
 
 # Add a subcategory to an existing platform
-curl -X POST http://localhost:8080/api/v1/platforms/PC/subcategories \
+curl -X POST http://localhost:3000/api/v1/platforms/PC/subcategories \
   -H "Content-Type: application/json" \
   -d '{"name": "Ubisoft Connect"}'
 
 # Delete a platform (use ?force=true if games are assigned)
-curl -X DELETE "http://localhost:8080/api/v1/platforms/Nintendo%20DS?force=true"
+curl -X DELETE "http://localhost:3000/api/v1/platforms/Nintendo%20DS?force=true"
 ```
 
 ---
 
 ## 📡 REST API Reference
 
+All endpoints are accessible through the unified frontend port (`3000`):
+
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | API health check and uptime |
+| `GET` | `/health` | API health check and uptime (or direct on `8080`) |
 | `GET` | `/api/v1/games` | List games with search/filter/pagination |
 | `POST` | `/api/v1/games` | Add a new game to the catalog |
 | `GET` | `/api/v1/games/:id` | Get details for a single game |
@@ -128,13 +130,13 @@ curl -X DELETE "http://localhost:8080/api/v1/platforms/Nintendo%20DS?force=true"
 
 ## 💾 Data & Persistence
 
-- The database file is located at `data/game_catalog.sqlite`.
-- The `data/` directory is mounted into the API container (`/app/data`), preserving all your entries when containers are updated or recreated.
-- The `data/` directory is excluded from version control (`.gitignore`), keeping your personal game collection private.
+- The database file is stored at `data/game_catalog.sqlite`.
+- The `data/` directory is mounted into the API container (`/app/data`), preserving all games, platforms, and personal notes across container updates and builds.
+- The `data/` directory is excluded from version control (`.gitignore`), keeping your personal catalog private.
 
 ---
 
 ## ⌨️ Shortcuts
 
 - **`/` or `Ctrl + K`**: Open Omnibar quick search
-- **`Esc`**: Close modals
+- **`Esc`**: Close open modals

@@ -12,6 +12,7 @@ import {
   Tag
 } from 'lucide-react';
 import { PlatformInfo } from '../types/game';
+import { getApiUrl } from '../utils/api';
 
 interface ManagePlatformsModalProps {
   isOpen: boolean;
@@ -56,7 +57,7 @@ export const ManagePlatformsModal: React.FC<ManagePlatformsModalProps> = ({
     if (!name) return;
 
     setIsAddingPlatform(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
 
     const subcategories = newPlatformSubs
       .split(',')
@@ -99,7 +100,7 @@ export const ManagePlatformsModal: React.FC<ManagePlatformsModalProps> = ({
     }
 
     setActionLoading(`delete-plat-${platformName}`);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
 
     try {
       const res = await fetch(`${apiUrl}/platforms/${encodeURIComponent(platformName)}?force=true`, {
@@ -127,7 +128,7 @@ export const ManagePlatformsModal: React.FC<ManagePlatformsModalProps> = ({
     if (!sub) return;
 
     setIsAddingSub(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
 
     try {
       const res = await fetch(`${apiUrl}/platforms/${encodeURIComponent(platformName)}/subcategories`, {
@@ -160,7 +161,7 @@ export const ManagePlatformsModal: React.FC<ManagePlatformsModalProps> = ({
     }
 
     setActionLoading(`delete-sub-${platformName}-${subcategory}`);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
 
     try {
       const res = await fetch(

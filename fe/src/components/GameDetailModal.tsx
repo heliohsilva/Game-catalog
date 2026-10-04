@@ -8,6 +8,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import { Game } from '../types/game';
+import { getApiUrl } from '../utils/api';
 
 interface GameDetailModalProps {
   game: Game | null;
@@ -43,7 +44,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
     try {
       let res = await fetch(`/api/hltb?q=${encodeURIComponent(editedGame.title)}`);
       if (!res.ok) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+        const apiUrl = getApiUrl();
         res = await fetch(`${apiUrl}/hltb?q=${encodeURIComponent(editedGame.title)}`);
       }
       const data = await res.json();

@@ -5,11 +5,14 @@ services:
       dockerfile: env/Dockerfile.fe
     container_name: game_catalog_fe
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${PORT:-3000}:3000"
     env_file:
       - .env
     environment:
       - NODE_ENV=production
+      - INTERNAL_API_URL=http://api:8080/api/v1
+    depends_on:
+      - api
     restart: unless-stopped
 
   api:
@@ -18,10 +21,9 @@ services:
       dockerfile: env/Dockerfile.api
     container_name: game_catalog_api
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
     env_file:
       - .env
     volumes:
       - ../data:/app/data
     restart: unless-stopped
-

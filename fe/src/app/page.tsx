@@ -15,6 +15,7 @@ import { AddGameModal } from '../components/AddGameModal';
 import { GameDetailModal } from '../components/GameDetailModal';
 import { SearchOmnibarModal } from '../components/SearchOmnibarModal';
 import { ManagePlatformsModal } from '../components/ManagePlatformsModal';
+import { getApiUrl } from '../utils/api';
 
 const STORAGE_KEY_THEME = 'game_catalog_theme_id_v6';
 
@@ -39,7 +40,7 @@ export default function GameCatalogPage() {
 
   // Fetch platforms from backend API
   const fetchPlatforms = useCallback(async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/platforms`);
       if (res.ok) {
@@ -57,7 +58,7 @@ export default function GameCatalogPage() {
 
   // Fetch games from backend API
   const fetchGames = useCallback(async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/games?limit=200`);
       if (res.ok) {
@@ -128,7 +129,7 @@ export default function GameCatalogPage() {
 
   // Add game
   const handleAddGame = async (newGameData: Omit<Game, 'id' | 'addedAt'>) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/games`, {
         method: 'POST',
@@ -155,7 +156,7 @@ export default function GameCatalogPage() {
 
   // Update game
   const handleUpdateGame = async (updated: Game) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
     try {
       await fetch(`${apiUrl}/games/${updated.id}`, {
         method: 'PUT',
@@ -171,7 +172,7 @@ export default function GameCatalogPage() {
   // Delete game
   const handleDeleteGame = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    const apiUrl = getApiUrl();
     try {
       await fetch(`${apiUrl}/games/${id}`, {
         method: 'DELETE',
