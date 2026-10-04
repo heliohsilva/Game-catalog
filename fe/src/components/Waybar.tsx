@@ -7,8 +7,7 @@ import {
   Plus, 
   Palette, 
   Sun, 
-  Moon,
-  Image as ImageIcon
+  Moon
 } from 'lucide-react';
 import { OmarchyTheme, Platform, PLATFORMS } from '../types/game';
 import { DEFAULT_DARK_THEME_ID, DEFAULT_LIGHT_THEME_ID } from '../data/themes';
@@ -22,8 +21,6 @@ interface WaybarProps {
   selectedPlatform: Platform | 'All';
   onSelectPlatform: (platform: Platform | 'All') => void;
   totalGames: number;
-  wallpaperName?: string;
-  onCycleWallpaper?: () => void;
 }
 
 export const Waybar: React.FC<WaybarProps> = ({
@@ -35,8 +32,6 @@ export const Waybar: React.FC<WaybarProps> = ({
   selectedPlatform,
   onSelectPlatform,
   totalGames,
-  wallpaperName,
-  onCycleWallpaper,
 }) => {
   const handleQuickThemeToggle = () => {
     if (currentTheme.id === DEFAULT_DARK_THEME_ID) {
@@ -114,17 +109,6 @@ export const Waybar: React.FC<WaybarProps> = ({
             </button>
 
             <div className="h-4 w-px bg-[var(--border-color)] mx-0.5" />
-
-            {/* Cycle Pixel Art Wallpaper */}
-            {onCycleWallpaper && (
-              <button
-                onClick={onCycleWallpaper}
-                className="p-1.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--accent)] text-[var(--fg-light)] hover:text-[var(--fg-primary)] hover:bg-[var(--selection)] transition-colors cursor-pointer"
-                title={`Cycle Pixel Art Wallpaper (Current: ${wallpaperName || 'Pixel Village'})`}
-              >
-                <ImageIcon className="w-3.5 h-3.5 text-[var(--accent)]" />
-              </button>
-            )}
 
             {/* Quick 1-click Theme Toggle (Cyber Blue / Cream Latte) */}
             <button

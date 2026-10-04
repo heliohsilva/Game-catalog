@@ -17,14 +17,6 @@ import { GameDetailModal } from '../components/GameDetailModal';
 import { SearchOmnibarModal } from '../components/SearchOmnibarModal';
 
 const STORAGE_KEY_THEME = 'game_catalog_theme_id_v6';
-const STORAGE_KEY_WALLPAPER = 'game_catalog_wallpaper_v6';
-
-const WALLPAPERS = [
-  { id: 'village', name: 'Pixel Village (Night)', url: '/wallpapers/pixel-art-bg.jpg' },
-  { id: 'city', name: 'Pixel City Skyline', url: '/wallpapers/pixel-city.gif' },
-  { id: 'sunset', name: 'Pixel Sunset City', url: '/wallpapers/sunset-city.gif' },
-  { id: 'backyard', name: 'Pixel Backyard', url: '/wallpapers/pixel-backyard.webp' },
-];
 
 export default function GameCatalogPage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -32,7 +24,6 @@ export default function GameCatalogPage() {
   const [currentTheme, setCurrentTheme] = useState<OmarchyTheme>(() => 
     getThemeById(DEFAULT_DARK_THEME_ID)
   );
-  const [wallpaperIndex, setWallpaperIndex] = useState(0);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'title' | 'hours'>('title');
@@ -47,10 +38,12 @@ export default function GameCatalogPage() {
   // Load saved theme/wallpaper and fetch games from SQLite Backend API on mount
   useEffect(() => {
     try {
-      // Clean up any legacy localStorage cached games so browser never shows stale mock data
+      // Clean up any legacy localStorage cached games and wallpapers
       localStorage.removeItem('game_catalog_games');
       localStorage.removeItem('game_catalog_games_v5');
       localStorage.removeItem('game_catalog_games_v6');
+      localStorage.removeItem('game_catalog_wallpaper_v5');
+      localStorage.removeItem('game_catalog_wallpaper_v6');
 
       const savedThemeId = localStorage.getItem(STORAGE_KEY_THEME);
       if (savedThemeId) {
@@ -59,14 +52,6 @@ export default function GameCatalogPage() {
         applyThemeToCss(t);
       } else {
         applyThemeToCss(getThemeById(DEFAULT_DARK_THEME_ID));
-      }
-
-      const savedWallpaper = localStorage.getItem(STORAGE_KEY_WALLPAPER);
-      if (savedWallpaper !== null) {
-        const idx = parseInt(savedWallpaper, 10);
-        if (!isNaN(idx) && idx >= 0 && idx < WALLPAPERS.length) {
-          setWallpaperIndex(idx);
-        }
       }
 
       // Fetch dynamic catalog from SQLite Backend API
@@ -103,19 +88,6 @@ export default function GameCatalogPage() {
     } catch {
       // ignore
     }
-  };
-
-  // Cycle Wallpaper handler
-  const handleCycleWallpaper = () => {
-    setWallpaperIndex((prev) => {
-      const next = (prev + 1) % WALLPAPERS.length;
-      try {
-        localStorage.setItem(STORAGE_KEY_WALLPAPER, String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
   };
 
   // Add game
@@ -218,31 +190,15 @@ export default function GameCatalogPage() {
   const platformsToDisplay: Platform[] =
     selectedPlatform === 'All' ? PLATFORMS : [selectedPlatform];
 
-  const currentWallpaper = WALLPAPERS[wallpaperIndex];
-
   return (
     <div className="relative min-h-screen text-[var(--fg-primary)]">
-      
-      {/* 16-bit Retro Pixel Art Wallpaper in Background (z-0) */}
+      {/* Static Textured Background (Zero Distractions, Tactile Matte Micro-Texture) */}
       <div 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none transition-all duration-500"
-        style={{
-          backgroundImage: `url('${currentWallpaper.url}')`,
-          imageRendering: 'pixelated',
-        }}
+        className="fixed inset-0 z-0 pointer-events-none select-none bg-texture"
+        aria-hidden="true"
       />
 
-      {/* Subtle Ambient Theme Overlay for transparent components to blur over (z-0) */}
-      <div 
-        className="fixed inset-0 z-0 pointer-events-none transition-colors duration-200"
-        style={{
-          backgroundColor: currentTheme.mode === 'dark' 
-            ? 'rgba(9, 10, 18, 0.32)' 
-            : 'rgba(250, 246, 238, 0.40)',
-        }}
-      />
-
-      {/* Content Layer (relative z-10) directly on top of wallpaper so backdrop-filter blurs it */}
+      {/* Content Layer (relative z-10) with frosted glass blurring over the static texture */}
       <div className="relative z-10 pb-16">
         {/* Clean Top Menu Bar */}
         <Waybar
@@ -257,8 +213,6 @@ export default function GameCatalogPage() {
           selectedPlatform={selectedPlatform}
           onSelectPlatform={setSelectedPlatform}
           totalGames={games.length}
-          wallpaperName={currentWallpaper.name}
-          onCycleWallpaper={handleCycleWallpaper}
         />
 
         {/* Main Container */}

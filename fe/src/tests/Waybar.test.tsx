@@ -19,8 +19,6 @@ describe('Waybar Component', () => {
         selectedPlatform="All"
         onSelectPlatform={vi.fn()}
         totalGames={32}
-        wallpaperName="16-bit Retro Pixel Art"
-        onCycleWallpaper={vi.fn()}
       />
     );
 
@@ -90,11 +88,10 @@ describe('Waybar Component', () => {
     expect(handleThemeSelect).toHaveBeenCalledWith(DEFAULT_DARK_THEME_ID);
   });
 
-  it('triggers search, add, theme modal, and wallpaper cycle actions', () => {
+  it('triggers search, add, and theme modal actions', () => {
     const handleSearch = vi.fn();
     const handleAdd = vi.fn();
     const handleThemeModal = vi.fn();
-    const handleWallpaper = vi.fn();
 
     render(
       <Waybar
@@ -106,7 +103,6 @@ describe('Waybar Component', () => {
         selectedPlatform="All"
         onSelectPlatform={vi.fn()}
         totalGames={32}
-        onCycleWallpaper={handleWallpaper}
       />
     );
 
@@ -118,9 +114,5 @@ describe('Waybar Component', () => {
 
     fireEvent.click(screen.getByTitle(/Browse all 22 Omarchy Themes/i));
     expect(handleThemeModal).toHaveBeenCalledTimes(1);
-
-    const wallpaperBtn = screen.getByTitle(/Cycle Pixel Art Wallpaper/i);
-    fireEvent.click(wallpaperBtn);
-    expect(handleWallpaper).toHaveBeenCalledTimes(1);
   });
 });
