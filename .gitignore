@@ -26,8 +26,8 @@ coverage.html
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
-!data/game_catalog.sqlite
-!game_catalog.sqlite
+data/*.db
+data/*.sqlite*
 
 # Environment files
 *.env
