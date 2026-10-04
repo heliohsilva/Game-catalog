@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+fe/node_modules/
+
+# Next.js build output
+.next/
+fe/.next/
+out/
+fe/out/
+
+# Go build output
+api/bin/
+api/server
+api/api
+*.test
+coverage.out
+coverage.html
+
+# SQLite database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment files
+*.env
+!*.env.example
+
+# IDE & OS files
+.DS_Store
+*.log
+.vscode/
+.idea/
+

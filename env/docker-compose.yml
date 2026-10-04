@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: env/Dockerfile.fe
+    container_name: game_catalog_fe
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: env/Dockerfile.api
+    container_name: game_catalog_api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped

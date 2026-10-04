@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Default Theme: Cyber Blue (Hackerman with blue instead of green) */
+  --bg-primary: #0B0C16;
+  --bg-darker: #06060c;
+  --bg-lighter: #151828;
+  --bg-card: rgba(21, 24, 40, 0.45);
+  --bg-pill: rgba(30, 37, 58, 0.50);
+  --fg-primary: #ddf7ff;
+  --fg-bright: #ffffff;
+  --fg-light: #94a3b8;
+  --fg-dark: #64748b;
+  --accent: #38bdf8;
+  --selection: #172554;
+  --muted: #1e293b;
+  --border-color: rgba(56, 189, 248, 0.22);
+  
+  --color-red: #f43f5e;
+  --color-yellow: #facc15;
+  --color-green: #38bdf8;
+  --color-cyan: #7cf8f7;
+  --color-blue: #38bdf8;
+  --color-magenta: #818cf8;
+}
+
+html, body {
+  background-color: transparent !important;
+  color: var(--fg-primary);
+  font-family: 'JetBrains Mono', monospace, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  transition: color 0.15s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Retro Pixel Font for accents */
+.font-retro {
+  font-family: 'Silkscreen', monospace;
+}
+
+/* Minimalist Hyprland Frosted Glass - Strong Blur and Saturation */
+.hypr-glass {
+  background-color: var(--bg-card);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+}
+
+.hypr-panel {
+  background-color: var(--bg-pill);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Minimalist Floating Window Animation */
+@keyframes hyprFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hypr-window-in {
+  animation: hyprFadeIn 0.15s ease-out forwards;
+}
