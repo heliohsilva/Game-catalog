@@ -41,10 +41,14 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
     setIsFetchingHLTB(true);
     setHltbStatus('Checking HowLongToBeat...');
     try {
-      const res = await fetch(`/api/hltb?q=${encodeURIComponent(editedGame.title)}`);
+      let res = await fetch(`/api/hltb?q=${encodeURIComponent(editedGame.title)}`);
+      if (!res.ok) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+        res = await fetch(`${apiUrl}/hltb?q=${encodeURIComponent(editedGame.title)}`);
+      }
       const data = await res.json();
       if (data.found) {
-        const formatted = data.timeToBeat || `${data.mainHours}h`;
+        const formatted = data.timeToBeat || (data.mainHours ? `${data.mainHours}h` : 'N/A');
         const updated = {
           ...editedGame,
           timeToBeat: formatted,
@@ -98,7 +102,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
           
           {/* Title & Platform Header */}
           <div>
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--selection)] text-[var(--accent)] border border-[var(--border-color)]">
                 {editedGame.platform}
               </span>
@@ -108,7 +112,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 </span>
               )}
             </div>
-            <h2 className="text-base font-bold text-[var(--fg-bright)]">
+            <h2 className="text-lg sm:text-xl font-extrabold text-[var(--fg-bright)] tracking-tight">
               {editedGame.title}
             </h2>
           </div>

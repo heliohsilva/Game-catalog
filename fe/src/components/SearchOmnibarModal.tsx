@@ -108,8 +108,10 @@ export const SearchOmnibarModal: React.FC<SearchOmnibarModalProps> = ({
                   }`}
                 >
                   <div className="truncate min-w-0">
-                    <div className="text-xs truncate font-bold">{game.title}</div>
-                    <div className={`text-[10px] font-mono ${isSelected ? 'text-[var(--bg-primary)]/80' : 'text-[var(--fg-light)]'}`}>
+                    <div className={`text-sm sm:text-base font-bold truncate ${isSelected ? 'text-[var(--bg-primary)]' : 'text-[var(--fg-bright)]'}`}>
+                      {game.title}
+                    </div>
+                    <div className={`text-[10px] sm:text-[11px] font-mono ${isSelected ? 'text-[var(--bg-primary)]/80' : 'text-[var(--fg-light)]'}`}>
                       {game.platform} {game.subcategory ? `[${game.subcategory}]` : ''} • {game.genre}
                     </div>
                   </div>

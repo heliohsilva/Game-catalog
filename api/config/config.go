@@ -44,7 +44,7 @@ func Load() *Config {
 		}
 	}
 	if dbPath == "" {
-		dbPath = "game_catalog.db"
+		dbPath = "game_catalog.sqlite"
 	}
 
 	// CORS Origins

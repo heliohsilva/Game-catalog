@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Game, Platform, PLATFORMS, OmarchyTheme } from '../types/game';
-import { INITIAL_GAMES } from '../data/initialGames';
 import { 
   DEFAULT_DARK_THEME_ID, 
   DEFAULT_LIGHT_THEME_ID, 
@@ -17,9 +16,9 @@ import { AddGameModal } from '../components/AddGameModal';
 import { GameDetailModal } from '../components/GameDetailModal';
 import { SearchOmnibarModal } from '../components/SearchOmnibarModal';
 
-const STORAGE_KEY_GAMES = 'game_catalog_games_v5';
-const STORAGE_KEY_THEME = 'game_catalog_theme_id_v5';
-const STORAGE_KEY_WALLPAPER = 'game_catalog_wallpaper_v5';
+const STORAGE_KEY_GAMES = 'game_catalog_games_v6';
+const STORAGE_KEY_THEME = 'game_catalog_theme_id_v6';
+const STORAGE_KEY_WALLPAPER = 'game_catalog_wallpaper_v6';
 
 const WALLPAPERS = [
   { id: 'village', name: 'Pixel Village (Night)', url: '/wallpapers/pixel-art-bg.jpg' },
@@ -29,7 +28,8 @@ const WALLPAPERS = [
 ];
 
 export default function GameCatalogPage() {
-  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
+  const [games, setGames] = useState<Game[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentTheme, setCurrentTheme] = useState<OmarchyTheme>(() => 
     getThemeById(DEFAULT_DARK_THEME_ID)
   );
@@ -45,7 +45,7 @@ export default function GameCatalogPage() {
   const [inspectedGame, setInspectedGame] = useState<Game | null>(null);
   const [addPlatformPreset, setAddPlatformPreset] = useState<Platform>('PC');
 
-  // Load saved state from LocalStorage on mount
+  // Load saved state and fetch games from SQLite Backend API on mount
   useEffect(() => {
     try {
       const savedThemeId = localStorage.getItem(STORAGE_KEY_THEME);
@@ -67,31 +67,39 @@ export default function GameCatalogPage() {
 
       const savedGames = localStorage.getItem(STORAGE_KEY_GAMES);
       if (savedGames) {
-        const parsed = JSON.parse(savedGames);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setGames(parsed);
+        try {
+          const parsed = JSON.parse(savedGames);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setGames(parsed);
+          }
+        } catch {
+          // ignore cache parse error
         }
       }
 
-      // Fetch from Backend API (Golang Gin + SQLite) if available
+      // Fetch dynamic catalog from Backend API (Golang Gin + SQLite)
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
-      fetch(`${apiUrl}/games?limit=100`)
+      fetch(`${apiUrl}/games?limit=200`)
         .then((res) => (res.ok ? res.json() : null))
         .then((res) => {
-          if (res && Array.isArray(res.data) && res.data.length > 0) {
+          if (res && Array.isArray(res.data)) {
             setGames(res.data);
             try {
               localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(res.data));
             } catch {
-              // ignore
+              // ignore storage quota error
             }
           }
         })
-        .catch(() => {
-          // Graceful fallback to initialGames/localStorage if API is offline
+        .catch((err) => {
+          console.error('Failed to fetch catalog from SQLite API:', err);
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
     } catch {
       applyThemeToCss(getThemeById(DEFAULT_DARK_THEME_ID));
+      setIsLoading(false);
     }
   }, []);
 
@@ -305,25 +313,39 @@ export default function GameCatalogPage() {
           totalFiltered={filteredGames.length}
         />
 
-        {/* Platform Clusters */}
-        <div className="space-y-4">
-          {platformsToDisplay.map((platform) => {
-            const gamesForPlatform = filteredGames.filter(
-              (g) => g.platform === platform
-            );
+        {/* Platform Clusters or Loading / Empty State */}
+        {isLoading && games.length === 0 ? (
+          <div className="py-16 text-center hypr-glass rounded-2xl p-8 border border-[var(--border-color)]">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+              <p className="font-mono text-xs text-[var(--fg-light)]">Loading game catalog from database...</p>
+            </div>
+          </div>
+        ) : games.length === 0 ? (
+          <div className="py-16 text-center hypr-glass rounded-2xl p-8 border border-[var(--border-color)]">
+            <p className="font-bold text-sm text-[var(--fg-primary)]">Catalog database is empty</p>
+            <p className="font-mono text-xs text-[var(--fg-light)] mt-1">Add your first game using the "+ Add Game" button above.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {platformsToDisplay.map((platform) => {
+              const gamesForPlatform = filteredGames.filter(
+                (g) => g.platform === platform
+              );
 
-            return (
-              <PlatformCluster
-                key={platform}
-                platform={platform}
-                games={gamesForPlatform}
-                onSelectGame={(g) => setInspectedGame(g)}
-                onDeleteGame={handleDeleteGame}
-                onAddGameToPlatform={handleOpenAddForPlatform}
-              />
-            );
-          })}
-        </div>
+              return (
+                <PlatformCluster
+                  key={platform}
+                  platform={platform}
+                  games={gamesForPlatform}
+                  onSelectGame={(g) => setInspectedGame(g)}
+                  onDeleteGame={handleDeleteGame}
+                  onAddGameToPlatform={handleOpenAddForPlatform}
+                />
+              );
+            })}
+          </div>
+        )}
 
       </main>
       </div>

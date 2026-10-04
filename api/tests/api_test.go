@@ -964,3 +964,35 @@ func TestHealthDegradedWhenDBClosed(t *testing.T) {
 	}
 }
 
+func TestHLTBEndpoint(t *testing.T) {
+	router, db := setupTestServer(t)
+	defer db.Close()
+
+	t.Run("Missing query returns 400", func(t *testing.T) {
+		w := performRequest(router, "GET", "/api/v1/hltb", nil, nil)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", w.Code)
+		}
+	})
+
+	t.Run("Empty query returns 400", func(t *testing.T) {
+		w := performRequest(router, "GET", "/api/v1/hltb?q=", nil, nil)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request, got %d", w.Code)
+		}
+	})
+
+	t.Run("Punctuation only returns found false", func(t *testing.T) {
+		w := performRequest(router, "GET", "/api/v1/hltb?q=---", nil, nil)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200 OK, got %d", w.Code)
+		}
+		var res map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &res)
+		if res["found"] != false {
+			t.Errorf("expected found: false, got %v", res["found"])
+		}
+	})
+}
+
+

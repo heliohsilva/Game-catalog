@@ -10,7 +10,7 @@ fe/out/
 
 # Go build output
 api/bin/
-api/server
+!api/server/
 api/api
 *.test
 coverage.out
@@ -23,6 +23,11 @@ coverage.html
 *.db-wal
 *.sqlite
 *.sqlite3
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+!data/game_catalog.sqlite
+!game_catalog.sqlite
 
 # Environment files
 *.env

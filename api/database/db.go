@@ -14,7 +14,7 @@ import (
 // InitDB initializes SQLite database connection, applies PRAGMAs and creates tables
 func InitDB(dbPath string) (*sql.DB, error) {
 	if dbPath == "" {
-		dbPath = "game_catalog.db"
+		dbPath = "game_catalog.sqlite"
 	}
 
 	// If not an in-memory database, ensure the directory exists

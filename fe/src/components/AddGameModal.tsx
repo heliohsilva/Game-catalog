@@ -56,11 +56,15 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
     // Automatically retrieve time to beat from HowLongToBeat
     try {
-      const res = await fetch(`/api/hltb?q=${encodeURIComponent(title.trim())}`);
+      let res = await fetch(`/api/hltb?q=${encodeURIComponent(title.trim())}`);
+      if (!res.ok) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+        res = await fetch(`${apiUrl}/hltb?q=${encodeURIComponent(title.trim())}`);
+      }
       if (res.ok) {
         const data = await res.json();
         if (data.found) {
-          hltbTime = data.timeToBeat || `${data.mainHours}h`;
+          hltbTime = data.timeToBeat || (data.mainHours ? `${data.mainHours}h` : '');
           hltbMain = data.mainHours;
         }
       }

@@ -19,8 +19,8 @@ func TestConfigLoadDefaults(t *testing.T) {
 	if cfg.GinMode != "release" {
 		t.Errorf("expected default ginMode release, got %s", cfg.GinMode)
 	}
-	if cfg.DatabasePath != "game_catalog.db" {
-		t.Errorf("expected default dbPath game_catalog.db, got %s", cfg.DatabasePath)
+	if cfg.DatabasePath != "game_catalog.sqlite" {
+		t.Errorf("expected default dbPath game_catalog.sqlite, got %s", cfg.DatabasePath)
 	}
 	if !cfg.AutoSeed {
 		t.Error("expected default autoSeed true")

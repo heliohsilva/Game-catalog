@@ -100,7 +100,7 @@ func TestInitDB_DiskFileWithNestedDir(t *testing.T) {
 }
 
 func TestInitDB_DefaultPath(t *testing.T) {
-	// Empty path defaults to game_catalog.db
+	// Empty path defaults to game_catalog.sqlite
 	tmpDir, err := os.MkdirTemp("", "game_catalog_default_*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
@@ -117,7 +117,7 @@ func TestInitDB_DefaultPath(t *testing.T) {
 	}
 	defer db.Close()
 
-	if _, err := os.Stat("game_catalog.db"); os.IsNotExist(err) {
-		t.Error("expected default game_catalog.db to be created")
+	if _, err := os.Stat("game_catalog.sqlite"); os.IsNotExist(err) {
+		t.Error("expected default game_catalog.sqlite to be created")
 	}
 }

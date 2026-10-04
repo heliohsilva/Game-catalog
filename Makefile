@@ -45,9 +45,13 @@ api-test:
 
 test: fe-test api-test
 
+seed-db:
+	cd api && go run cmd/seed/main.go -path ../data/game_catalog.sqlite
+	cp data/game_catalog.sqlite game_catalog.sqlite
+
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -rf fe/.next fe/out fe/.turbo api/bin api/*.db api/*.db-shm api/*.db-wal
+	rm -rf fe/.next fe/out fe/.turbo api/bin *.db *.db-shm *.db-wal *.sqlite-shm *.sqlite-wal api/*.db api/*.sqlite-shm api/*.sqlite-wal
 	@echo "Clean completed."
 
 clean-all: clean
