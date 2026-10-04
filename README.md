@@ -1,21 +1,25 @@
 # 🎮 Game Catalog
 
-A centralized, distraction-free game collection catalog designed to unify all your games across every launcher, console, and retro platform.
+A centralized, distraction-free personal game catalog designed to help you curate, organize, and track your games across every launcher, console, and retro platform in one place.
 
-> **Objective:** Stop wondering what to play next. Game Catalog brings together your Steam, GOG, Epic, PlayStation, Switch, Xbox, emulation, and physical collections into one cohesive, fast dashboard with HowLongToBeat estimates and customizable platforms.
+> **Objective:** Stop wondering what to play next. Game Catalog provides a clean, fast dashboard where you manually track and curate your game collection across PC launchers (Steam, GOG, Epic, Ubisoft Connect, etc.), consoles (PlayStation, Switch, Xbox), emulators, and physical cartridges — with instant HowLongToBeat time estimates to help you pick what fits your available time.
+
+> [!NOTE]
+> **Intentionally Manual & Curated**: Game Catalog does **not** connect to external store accounts, crawl third-party libraries, or auto-import games. Instead, it is an intentionally lightweight, private tracker where you manually maintain only the games you own, care about, or want to play next — without clutter, OAuth logins, or launcher bloat.
 
 ---
 
 ## ✨ Features
 
-- **Unified Collection Hub**: Track all your games across PC (Steam, GOG, Epic, Ubisoft Connect, etc.), consoles (PlayStation, Switch, Xbox), retro emulators, and custom platforms.
-- **Dynamic Platforms & Subplatforms**: Add or remove platforms on demand (e.g. Nintendo DS, PSP, Dreamcast) and configure custom subcategories / launchers (e.g. Ubisoft Connect, EA App, Cartridge, Homebrew).
-- **HowLongToBeat (HLTB) Integration**: Fetch story and completion times automatically so you can pick a game that fits your schedule.
-- **Status & Backlog Management**: Organize games by status (**Backlog**, **Playing**, **Completed**, **Abandoned**), genre, completion hours, and personal notes.
-- **Hyprland / Waybar Aesthetic**: Clean, minimalist frosted-glass UI with static tactile micro-texture, high-legibility typography, and no distracting animations.
-- **Omnibar Quick Search**: Instant search and filtering with `Ctrl+K` or `/`.
+- **Personal Curated Collection**: Manually add, edit, and organize only the games you actually own or want to play — no store account linking or automated bloat.
+- **Multi-Platform & Launcher Tagging**: Group your entries across platforms (PC, PlayStation, Switch, Xbox, Retro / Emulation, custom platforms) and subcategories / launchers (Steam, GOG, Epic, Ubisoft Connect, Cartridge, Homebrew, etc.).
+- **Dynamic Platforms On-Demand**: Add or remove platforms (e.g. Nintendo DS, PSP, Dreamcast) and launcher subcategories directly from the UI or REST API to match your physical and digital setup.
+- **HowLongToBeat (HLTB) Assistance**: When manually adding a game title, HowLongToBeat automatically suggests the estimated completion time (Main Story, Extra, Completionist) so you don't have to look it up.
+- **Backlog & Status Management**: Organize your gaming backlog by status (**Backlog**, **Playing**, **Completed**, **Abandoned**), genre, completion hours, and personal notes.
+- **Hyprland / Waybar Aesthetic**: Clean, minimalist frosted-glass UI with static tactile micro-texture, bold typography, and no distracting animations.
+- **Omnibar Quick Search**: Instant keyboard search and filtering with `Ctrl+K` or `/`.
 - **Theme Engine**: Switch between 10+ themes including Catppuccin Mocha, Tokyo Night, Nord, Gruvbox, Rose Pine, Dracula, and Cyberpunk.
-- **Homelab & Self-Hosting Ready**: Single-port deployment (`3000`), automatic environment initialization, internal API proxy, and persistent SQLite storage.
+- **Homelab & Self-Hosting Ready**: Single-port deployment (`3000`), turnkey setup (`git clone` + `make`), internal API proxy, and persistent local SQLite storage.
 
 ---
 
@@ -52,7 +56,7 @@ cd game-catalog
 make
 ```
 
-`make` will automatically initialize `env/.env` from `env/.env.example` if it doesn't exist, build both containers, and start them in the background.
+`make` will automatically initialize `env/.env` from `env/.env.example` if it doesn't exist, build both containers, and start them in the background with a clean, empty database ready for your collection.
 
 ### 2. Access the Application
 
