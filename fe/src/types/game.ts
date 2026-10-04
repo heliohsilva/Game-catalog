@@ -29,7 +29,7 @@ export interface Game {
   genre: string;
   timeToBeat?: string; // Retrieved automatically from HowLongToBeat
   timeToBeatMain?: number;
-  addedAt: string;
+  addedAt?: string;
 }
 
 export interface OmarchyTheme {

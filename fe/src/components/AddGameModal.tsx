@@ -111,10 +111,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           
           {/* Title */}
           <div>
-            <label className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
+            <label htmlFor="game-title" className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
               GAME TITLE *
             </label>
             <input
+              id="game-title"
               type="text"
               required
               placeholder="e.g. Chrono Trigger, Metroid Dread..."
@@ -126,10 +127,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
           {/* Platform */}
           <div>
-            <label className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
+            <label htmlFor="game-platform" className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
               PLATFORM *
             </label>
             <select
+              id="game-platform"
               value={platform}
               onChange={(e) => handlePlatformChange(e.target.value as Platform)}
               className="w-full px-3 py-2 rounded-xl hypr-glass border border-[var(--border-color)] focus:border-[var(--accent)] focus:outline-none text-xs text-[var(--fg-primary)] bg-[var(--bg-lighter)]"
@@ -143,10 +145,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           {/* Subcategory (e.g. Steam / GOG / Epic or PS2 / PS3 / PS4 / PS5 or Retro Consoles) */}
           {currentSubcategories.length > 1 && (
             <div>
-              <label className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
+              <label htmlFor="game-subcategory" className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
                 {platform === 'PC' ? 'STORE / LAUNCHER *' : 'SUBSECTION / CONSOLE *'}
               </label>
               <select
+                id="game-subcategory"
                 value={subcategory}
                 onChange={(e) => setSubcategory(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl hypr-glass border border-[var(--border-color)] focus:border-[var(--accent)] focus:outline-none text-xs text-[var(--fg-primary)] bg-[var(--bg-lighter)]"
@@ -160,10 +163,11 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
           {/* Genre (Single) */}
           <div>
-            <label className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
+            <label htmlFor="game-genre" className="block text-[11px] font-mono text-[var(--fg-light)] mb-1">
               GENRE (SINGLE) *
             </label>
             <input
+              id="game-genre"
               type="text"
               required
               placeholder="e.g. RPG, Action, Metroidvania, Platformer..."
