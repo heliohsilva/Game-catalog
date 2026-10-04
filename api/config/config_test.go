@@ -22,8 +22,8 @@ func TestConfigLoadDefaults(t *testing.T) {
 	if cfg.DatabasePath != "game_catalog.sqlite" {
 		t.Errorf("expected default dbPath game_catalog.sqlite, got %s", cfg.DatabasePath)
 	}
-	if !cfg.AutoSeed {
-		t.Error("expected default autoSeed true")
+	if cfg.AutoSeed {
+		t.Error("expected default autoSeed false")
 	}
 	if len(cfg.CORSAllowedOrigins) != 1 || cfg.CORSAllowedOrigins[0] != "*" {
 		t.Errorf("expected CORS allowed origins [*], got %v", cfg.CORSAllowedOrigins)
@@ -39,7 +39,7 @@ func TestConfigLoadCustomEnv(t *testing.T) {
 	os.Setenv("GIN_MODE", "debug")
 	os.Setenv("DB_PATH", "custom_dir/test.db")
 	os.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000, https://example.com")
-	os.Setenv("AUTO_SEED", "false")
+	os.Setenv("AUTO_SEED", "true")
 	os.Setenv("MAX_BODY_SIZE_BYTES", "1048576")
 	defer func() {
 		os.Unsetenv("PORT")
@@ -61,8 +61,8 @@ func TestConfigLoadCustomEnv(t *testing.T) {
 	if cfg.DatabasePath != "custom_dir/test.db" {
 		t.Errorf("expected DB_PATH custom_dir/test.db, got %s", cfg.DatabasePath)
 	}
-	if cfg.AutoSeed {
-		t.Error("expected autoSeed false")
+	if !cfg.AutoSeed {
+		t.Error("expected autoSeed true")
 	}
 	if len(cfg.CORSAllowedOrigins) != 2 || cfg.CORSAllowedOrigins[0] != "http://localhost:3000" || cfg.CORSAllowedOrigins[1] != "https://example.com" {
 		t.Errorf("unexpected CORS allowed origins: %v", cfg.CORSAllowedOrigins)

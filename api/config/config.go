@@ -60,8 +60,8 @@ func Load() *Config {
 		origins = []string{"*"}
 	}
 
-	// AutoSeed: default true if empty database
-	autoSeedStr := strings.ToLower(getEnv("AUTO_SEED", "true"))
+	// AutoSeed: default false if not specified
+	autoSeedStr := strings.ToLower(getEnv("AUTO_SEED", "false"))
 	autoSeed := autoSeedStr == "true" || autoSeedStr == "1" || autoSeedStr == "yes"
 
 	// Max Body Size in bytes (default: 2MB)
