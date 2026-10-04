@@ -147,7 +147,6 @@ func (r *sqliteGameRepository) List(ctx context.Context, q models.ListGamesQuery
 
 	// Search filter across title, genre, subcategory
 	if strings.TrimSpace(q.Search) != "" {
-		searchPattern := "%" + strings.TrimSpace(q.Search) + "%"
 		whereClauses = append(whereClauses, "(title LIKE ? ESCAPE '\\' OR genre LIKE ? ESCAPE '\\' OR subcategory LIKE ? ESCAPE '\\')")
 		// Escape special LIKE chars in search pattern if needed, or use simple pattern
 		escaped := strings.ReplaceAll(q.Search, "\\", "\\\\")
@@ -568,36 +567,49 @@ func (r *sqliteGameRepository) GetStats(ctx context.Context) (*models.CatalogSta
 	if err != nil {
 		return nil, fmt.Errorf("failed to query platform breakdown: %w", err)
 	}
-	defer pRows.Close()
 
+	var platformStats []models.PlatformStat
 	for pRows.Next() {
 		var ps models.PlatformStat
 		ps.Subcategories = make([]models.SubcategoryStat, 0)
 		if err := pRows.Scan(&ps.Platform, &ps.Count, &ps.TotalHours, &ps.AverageHours); err != nil {
+			pRows.Close()
 			return nil, err
 		}
-
-		// Get subcategory breakdown for this platform
-		subQuery := `
-			SELECT COALESCE(subcategory, 'Uncategorized'), COUNT(*)
-			FROM games
-			WHERE platform = ?
-			GROUP BY subcategory
-			ORDER BY COUNT(*) DESC
-		`
-		sRows, err := r.db.QueryContext(ctx, subQuery, ps.Platform)
-		if err == nil {
-			for sRows.Next() {
-				var ss models.SubcategoryStat
-				if err := sRows.Scan(&ss.Subcategory, &ss.Count); err == nil {
-					ps.Subcategories = append(ps.Subcategories, ss)
-				}
-			}
-			sRows.Close()
-		}
-
-		stats.PlatformBreakdown = append(stats.PlatformBreakdown, ps)
+		platformStats = append(platformStats, ps)
 	}
+	pRows.Close()
+
+	// Query subcategories in a single query to avoid connection starvation
+	subQuery := `
+		SELECT platform, COALESCE(subcategory, 'Uncategorized'), COUNT(*)
+		FROM games
+		GROUP BY platform, subcategory
+		ORDER BY COUNT(*) DESC
+	`
+	sRows, err := r.db.QueryContext(ctx, subQuery)
+	if err == nil {
+		subcatMap := make(map[string][]models.SubcategoryStat)
+		for sRows.Next() {
+			var plat, sub string
+			var cnt int
+			if err := sRows.Scan(&plat, &sub, &cnt); err == nil {
+				subcatMap[plat] = append(subcatMap[plat], models.SubcategoryStat{
+					Subcategory: sub,
+					Count:       cnt,
+				})
+			}
+		}
+		sRows.Close()
+
+		for i := range platformStats {
+			if subs, ok := subcatMap[platformStats[i].Platform]; ok {
+				platformStats[i].Subcategories = subs
+			}
+		}
+	}
+
+	stats.PlatformBreakdown = platformStats
 
 	// 5. Genre breakdown
 	genreQuery := `
