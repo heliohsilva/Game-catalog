@@ -5,7 +5,7 @@ services:
       dockerfile: env/Dockerfile.fe
     container_name: game_catalog_fe
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env
     environment:
@@ -18,7 +18,7 @@ services:
       dockerfile: env/Dockerfile.api
     container_name: game_catalog_api
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     env_file:
       - .env
     volumes:
