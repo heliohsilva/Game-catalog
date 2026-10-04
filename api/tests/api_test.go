@@ -136,6 +136,85 @@ func TestPlatformEndpoints(t *testing.T) {
 	}
 }
 
+func TestPlatformManagementEndpoints(t *testing.T) {
+	router, db := setupTestServer(t)
+	defer db.Close()
+
+	// 1. Create a new platform "Nintendo DS" with subcategories
+	createBody := map[string]interface{}{
+		"name":          "Nintendo DS",
+		"subcategories": []string{"Cartridge", "Homebrew"},
+	}
+	bodyBytes, _ := json.Marshal(createBody)
+	w := performRequest(router, "POST", "/api/v1/platforms", bodyBytes, nil)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 2. Duplicate platform should return 409 Conflict
+	wDup := performRequest(router, "POST", "/api/v1/platforms", bodyBytes, nil)
+	if wDup.Code != http.StatusConflict {
+		t.Errorf("expected 409 Conflict for duplicate platform, got %d", wDup.Code)
+	}
+
+	// 3. Empty platform name should return 400 Bad Request
+	emptyBody, _ := json.Marshal(map[string]interface{}{"name": ""})
+	wEmpty := performRequest(router, "POST", "/api/v1/platforms", emptyBody, nil)
+	if wEmpty.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for empty platform name, got %d", wEmpty.Code)
+	}
+
+	// 4. Create a game on the newly added "Nintendo DS" platform
+	gameBody := map[string]interface{}{
+		"title":       "Pokemon Platinum",
+		"platform":    "Nintendo DS",
+		"subcategory": "Cartridge",
+		"genre":       "RPG",
+	}
+	gBytes, _ := json.Marshal(gameBody)
+	wGame := performRequest(router, "POST", "/api/v1/games", gBytes, nil)
+	if wGame.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created for game on dynamic platform, got %d: %s", wGame.Code, wGame.Body.String())
+	}
+
+	// 5. Add a new subcategory "Ubisoft Connect" to existing platform "PC"
+	subBody, _ := json.Marshal(map[string]interface{}{"name": "Ubisoft Connect"})
+	wSub := performRequest(router, "POST", "/api/v1/platforms/PC/subcategories", subBody, nil)
+	if wSub.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created for subcategory addition, got %d: %s", wSub.Code, wSub.Body.String())
+	}
+
+	// 6. Create a game on PC with "Ubisoft Connect"
+	pcGameBody, _ := json.Marshal(map[string]interface{}{
+		"title":       "Rayman Legends",
+		"platform":    "PC",
+		"subcategory": "Ubisoft Connect",
+		"genre":       "Platformer",
+	})
+	wPCGame := performRequest(router, "POST", "/api/v1/games", pcGameBody, nil)
+	if wPCGame.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created for game with new subcategory, got %d: %s", wPCGame.Code, wPCGame.Body.String())
+	}
+
+	// 7. Delete platform "Nintendo DS" without force should fail because it has 1 game
+	wDelNoForce := performRequest(router, "DELETE", "/api/v1/platforms/Nintendo%20DS", nil, nil)
+	if wDelNoForce.Code != http.StatusConflict {
+		t.Errorf("expected 409 Conflict deleting platform with games, got %d", wDelNoForce.Code)
+	}
+
+	// 8. Delete platform "Nintendo DS" with force=true should succeed
+	wDelForce := performRequest(router, "DELETE", "/api/v1/platforms/Nintendo%20DS?force=true", nil, nil)
+	if wDelForce.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK deleting platform with force, got %d: %s", wDelForce.Code, wDelForce.Body.String())
+	}
+
+	// 9. Delete subcategory "Ubisoft Connect" with force=true
+	wDelSub := performRequest(router, "DELETE", "/api/v1/platforms/PC/subcategories/Ubisoft%20Connect?force=true", nil, nil)
+	if wDelSub.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK deleting subcategory with force, got %d: %s", wDelSub.Code, wDelSub.Body.String())
+	}
+}
+
 func TestSeedEndpoint(t *testing.T) {
 	router, db := setupTestServer(t)
 	defer db.Close()

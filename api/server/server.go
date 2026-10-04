@@ -64,8 +64,12 @@ func SetupRouter(cfg *config.Config, db *sql.DB) *gin.Engine {
 		v1.GET("/stats", statsHandler.GetStats)
 		v1.GET("/games/stats", statsHandler.GetStats)
 
-		// Platform metadata
+		// Platform metadata & management
 		v1.GET("/platforms", platformHandler.ListPlatforms)
+		v1.POST("/platforms", platformHandler.CreatePlatform)
+		v1.DELETE("/platforms/:name", platformHandler.DeletePlatform)
+		v1.POST("/platforms/:name/subcategories", platformHandler.CreateSubcategory)
+		v1.DELETE("/platforms/:name/subcategories/:sub", platformHandler.DeleteSubcategory)
 
 		// Seed initial games
 		v1.POST("/seed", seedHandler.Seed)

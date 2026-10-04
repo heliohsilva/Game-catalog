@@ -6,15 +6,23 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/google/uuid"
 
 	"game-catalog/api/models"
 )
 
 var (
-	ErrNotFound       = errors.New("game not found")
-	ErrDuplicate      = errors.New("a game with this title, platform, and subcategory already exists")
-	ErrDuplicateID    = errors.New("a game with this ID already exists")
-	ErrDatabaseClosed = errors.New("database connection is closed")
+	ErrNotFound            = errors.New("game not found")
+	ErrDuplicate           = errors.New("a game with this title, platform, and subcategory already exists")
+	ErrDuplicateID         = errors.New("a game with this ID already exists")
+	ErrDatabaseClosed      = errors.New("database connection is closed")
+	ErrPlatformNotFound    = errors.New("platform not found")
+	ErrPlatformExists      = errors.New("platform already exists")
+	ErrSubcategoryExists   = errors.New("subcategory already exists")
+	ErrSubcategoryNotFound = errors.New("subcategory not found")
+	ErrHasGames            = errors.New("platform or subcategory still contains games")
 )
 
 // GameRepository defines database operations for the game catalog
@@ -31,6 +39,11 @@ type GameRepository interface {
 	ExistsByID(ctx context.Context, id string) (bool, error)
 	ExistsDuplicate(ctx context.Context, title, platform string, subcategory *string, excludeID string) (bool, error)
 	Count(ctx context.Context) (int, error)
+
+	AddPlatform(ctx context.Context, name string, subcategories []string) (*models.PlatformInfo, error)
+	DeletePlatform(ctx context.Context, name string, force bool) error
+	AddSubcategory(ctx context.Context, platformName string, subcategory string) error
+	DeleteSubcategory(ctx context.Context, platformName string, subcategory string, force bool) error
 }
 
 type sqliteGameRepository struct {
@@ -636,26 +649,275 @@ func (r *sqliteGameRepository) GetStats(ctx context.Context) (*models.CatalogSta
 }
 
 func (r *sqliteGameRepository) GetPlatformStats(ctx context.Context) ([]models.PlatformInfo, error) {
-	result := make([]models.PlatformInfo, 0, len(models.ValidPlatforms))
+	rows, err := r.db.QueryContext(ctx, "SELECT p.name, COALESCE(s.name, '') FROM platforms p LEFT JOIN platform_subcategories s ON s.platform_name = p.name ORDER BY p.rowid ASC, s.rowid ASC")
+	var platformOrder []string
+	platformSubs := make(map[string][]string)
 
-	for _, platform := range models.ValidPlatforms {
+	if err == nil {
+		for rows.Next() {
+			var pName, sName string
+			if err := rows.Scan(&pName, &sName); err == nil {
+				if _, exists := platformSubs[pName]; !exists {
+					platformSubs[pName] = []string{}
+					platformOrder = append(platformOrder, pName)
+				}
+				if sName != "" {
+					platformSubs[pName] = append(platformSubs[pName], sName)
+				}
+			}
+		}
+		rows.Close()
+	}
+
+	if len(platformOrder) == 0 {
+		platformOrder = models.GetValidPlatformsCopy()
+		for _, p := range platformOrder {
+			if cached, ok := models.GetValidSubcategoriesCopy(p); ok {
+				platformSubs[p] = cached
+			} else {
+				platformSubs[p] = []string{}
+			}
+		}
+	}
+
+	result := make([]models.PlatformInfo, 0, len(platformOrder))
+	for _, platform := range platformOrder {
 		var count int
-		err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM games WHERE platform = ?", platform).Scan(&count)
+		err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM games WHERE platform = ? COLLATE NOCASE", platform).Scan(&count)
 		if err != nil {
 			return nil, err
 		}
 
-		subcats := models.ValidSubcategories[platform]
-		if subcats == nil {
-			subcats = []string{}
+		subs := platformSubs[platform]
+		if subs == nil {
+			subs = []string{}
 		}
 
 		result = append(result, models.PlatformInfo{
 			Name:          platform,
-			Subcategories: subcats,
+			Subcategories: subs,
 			GameCount:     count,
 		})
 	}
 
 	return result, nil
+}
+
+func (r *sqliteGameRepository) AddPlatform(ctx context.Context, name string, subcategories []string) (*models.PlatformInfo, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("platform name cannot be empty")
+	}
+
+	var exists int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM platforms WHERE name = ? COLLATE NOCASE", name).Scan(&exists)
+	if err != nil {
+		return nil, err
+	}
+	if exists > 0 {
+		return nil, ErrPlatformExists
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	id := "plat-" + uuid.New().String()
+	_, err = tx.ExecContext(ctx, "INSERT INTO platforms (id, name, created_at) VALUES (?, ?, ?)", id, name, now)
+	if err != nil {
+		return nil, err
+	}
+
+	cleanedSubs := make([]string, 0, len(subcategories))
+	for _, s := range subcategories {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		dup := false
+		for _, existing := range cleanedSubs {
+			if strings.EqualFold(existing, s) {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			continue
+		}
+
+		subID := "sub-" + uuid.New().String()
+		_, err = tx.ExecContext(ctx, "INSERT INTO platform_subcategories (id, platform_name, name, created_at) VALUES (?, ?, ?, ?)",
+			subID, name, s, now)
+		if err != nil {
+			return nil, err
+		}
+		cleanedSubs = append(cleanedSubs, s)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	models.AddPlatformRegistry(name, cleanedSubs)
+
+	return &models.PlatformInfo{
+		Name:          name,
+		Subcategories: cleanedSubs,
+		GameCount:     0,
+	}, nil
+}
+
+func (r *sqliteGameRepository) DeletePlatform(ctx context.Context, name string, force bool) error {
+	name = strings.TrimSpace(name)
+	var canonicalName string
+	err := r.db.QueryRowContext(ctx, "SELECT name FROM platforms WHERE name = ? COLLATE NOCASE", name).Scan(&canonicalName)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPlatformNotFound
+		}
+		return err
+	}
+
+	var gameCount int
+	err = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM games WHERE platform = ? COLLATE NOCASE", canonicalName).Scan(&gameCount)
+	if err != nil {
+		return err
+	}
+
+	if gameCount > 0 && !force {
+		return fmt.Errorf("cannot delete platform '%s': %d game(s) still assigned to it", canonicalName, gameCount)
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if gameCount > 0 && force {
+		_, err = tx.ExecContext(ctx, "DELETE FROM games WHERE platform = ? COLLATE NOCASE", canonicalName)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM platform_subcategories WHERE platform_name = ? COLLATE NOCASE", canonicalName)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM platforms WHERE name = ? COLLATE NOCASE", canonicalName)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	models.RemovePlatformRegistry(canonicalName)
+	return nil
+}
+
+func (r *sqliteGameRepository) AddSubcategory(ctx context.Context, platformName string, subcategory string) error {
+	platformName = strings.TrimSpace(platformName)
+	subcategory = strings.TrimSpace(subcategory)
+	if subcategory == "" {
+		return errors.New("subcategory name cannot be empty")
+	}
+
+	var canonicalPlatform string
+	err := r.db.QueryRowContext(ctx, "SELECT name FROM platforms WHERE name = ? COLLATE NOCASE", platformName).Scan(&canonicalPlatform)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPlatformNotFound
+		}
+		return err
+	}
+
+	var exists int
+	err = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM platform_subcategories WHERE platform_name = ? COLLATE NOCASE AND name = ? COLLATE NOCASE",
+		canonicalPlatform, subcategory).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if exists > 0 {
+		return ErrSubcategoryExists
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	id := "sub-" + uuid.New().String()
+	_, err = r.db.ExecContext(ctx, "INSERT INTO platform_subcategories (id, platform_name, name, created_at) VALUES (?, ?, ?, ?)",
+		id, canonicalPlatform, subcategory, now)
+	if err != nil {
+		return err
+	}
+
+	models.AddSubcategoryRegistry(canonicalPlatform, subcategory)
+	return nil
+}
+
+func (r *sqliteGameRepository) DeleteSubcategory(ctx context.Context, platformName string, subcategory string, force bool) error {
+	platformName = strings.TrimSpace(platformName)
+	subcategory = strings.TrimSpace(subcategory)
+
+	var canonicalPlatform string
+	err := r.db.QueryRowContext(ctx, "SELECT name FROM platforms WHERE name = ? COLLATE NOCASE", platformName).Scan(&canonicalPlatform)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPlatformNotFound
+		}
+		return err
+	}
+
+	var canonicalSub string
+	err = r.db.QueryRowContext(ctx, "SELECT name FROM platform_subcategories WHERE platform_name = ? COLLATE NOCASE AND name = ? COLLATE NOCASE",
+		canonicalPlatform, subcategory).Scan(&canonicalSub)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrSubcategoryNotFound
+		}
+		return err
+	}
+
+	var gameCount int
+	err = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM games WHERE platform = ? COLLATE NOCASE AND subcategory = ? COLLATE NOCASE",
+		canonicalPlatform, canonicalSub).Scan(&gameCount)
+	if err != nil {
+		return err
+	}
+
+	if gameCount > 0 && !force {
+		return fmt.Errorf("cannot delete subcategory '%s': %d game(s) currently use it", canonicalSub, gameCount)
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if gameCount > 0 && force {
+		_, err = tx.ExecContext(ctx, "UPDATE games SET subcategory = NULL WHERE platform = ? COLLATE NOCASE AND subcategory = ? COLLATE NOCASE",
+			canonicalPlatform, canonicalSub)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM platform_subcategories WHERE platform_name = ? COLLATE NOCASE AND name = ? COLLATE NOCASE",
+		canonicalPlatform, canonicalSub)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	models.RemoveSubcategoryRegistry(canonicalPlatform, canonicalSub)
+	return nil
 }

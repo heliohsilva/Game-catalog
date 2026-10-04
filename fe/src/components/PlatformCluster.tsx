@@ -11,6 +11,7 @@ import { GameCard } from './GameCard';
 
 interface PlatformClusterProps {
   platform: Platform;
+  subcategories?: string[];
   games: Game[];
   onSelectGame: (game: Game) => void;
   onDeleteGame: (id: string, e: React.MouseEvent) => void;
@@ -19,6 +20,7 @@ interface PlatformClusterProps {
 
 export const PlatformCluster: React.FC<PlatformClusterProps> = ({
   platform,
+  subcategories: propSubcategories,
   games,
   onSelectGame,
   onDeleteGame,
@@ -27,7 +29,9 @@ export const PlatformCluster: React.FC<PlatformClusterProps> = ({
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeSubcategory, setActiveSubcategory] = useState<string>('All');
 
-  const subcategories = PLATFORM_SUBCATEGORIES[platform] || [];
+  const subcategories = propSubcategories !== undefined 
+    ? propSubcategories 
+    : (PLATFORM_SUBCATEGORIES[platform] || []);
   const hasSubcategories = subcategories.length > 1;
 
   // Filter games if subcategory is selected

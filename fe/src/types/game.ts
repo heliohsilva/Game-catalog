@@ -1,11 +1,12 @@
-export type Platform =
-  | 'PC'
-  | 'Nintendo Switch'
-  | 'PlayStation'
-  | 'Xbox'
-  | 'Retro / Emulation';
+export type Platform = string;
 
-export const PLATFORMS: Platform[] = [
+export interface PlatformInfo {
+  name: string;
+  subcategories: string[];
+  gameCount?: number;
+}
+
+export const DEFAULT_PLATFORMS: Platform[] = [
   'PC',
   'Nintendo Switch',
   'PlayStation',
@@ -13,13 +14,19 @@ export const PLATFORMS: Platform[] = [
   'Retro / Emulation',
 ];
 
-export const PLATFORM_SUBCATEGORIES: Record<Platform, string[]> = {
+// Alias for backwards compatibility
+export const PLATFORMS: Platform[] = DEFAULT_PLATFORMS;
+
+export const DEFAULT_PLATFORM_SUBCATEGORIES: Record<string, string[]> = {
   'PC': ['Steam', 'GOG', 'Epic'],
   'PlayStation': ['PS2', 'PS3', 'PS4', 'PS5'],
   'Nintendo Switch': ['Switch'],
   'Xbox': ['Xbox Series X/S', 'Xbox One', 'Xbox 360'],
   'Retro / Emulation': ['PS1', 'N64', 'SNES', 'Genesis', 'NES', 'Master System', 'Neo Geo'],
 };
+
+// Alias for backwards compatibility
+export const PLATFORM_SUBCATEGORIES: Record<string, string[]> = DEFAULT_PLATFORM_SUBCATEGORIES;
 
 export interface Game {
   id: string;

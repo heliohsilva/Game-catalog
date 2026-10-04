@@ -7,9 +7,10 @@ import {
   Plus, 
   Palette, 
   Sun, 
-  Moon
+  Moon,
+  Layers
 } from 'lucide-react';
-import { OmarchyTheme, Platform, PLATFORMS } from '../types/game';
+import { OmarchyTheme, Platform, PLATFORMS, PlatformInfo } from '../types/game';
 import { DEFAULT_DARK_THEME_ID, DEFAULT_LIGHT_THEME_ID } from '../data/themes';
 
 interface WaybarProps {
@@ -18,9 +19,11 @@ interface WaybarProps {
   onOpenThemeModal: () => void;
   onOpenAddModal: () => void;
   onOpenSearchModal: () => void;
+  onOpenPlatformsModal?: () => void;
   selectedPlatform: Platform | 'All';
   onSelectPlatform: (platform: Platform | 'All') => void;
   totalGames: number;
+  platforms?: PlatformInfo[];
 }
 
 export const Waybar: React.FC<WaybarProps> = ({
@@ -29,9 +32,11 @@ export const Waybar: React.FC<WaybarProps> = ({
   onOpenThemeModal,
   onOpenAddModal,
   onOpenSearchModal,
+  onOpenPlatformsModal,
   selectedPlatform,
   onSelectPlatform,
   totalGames,
+  platforms,
 }) => {
   const handleQuickThemeToggle = () => {
     if (currentTheme.id === DEFAULT_DARK_THEME_ID) {
@@ -41,7 +46,8 @@ export const Waybar: React.FC<WaybarProps> = ({
     }
   };
 
-  const navPlatforms: (Platform | 'All')[] = ['All', ...PLATFORMS];
+  const platformNames = platforms && platforms.length > 0 ? platforms.map((p) => p.name) : PLATFORMS;
+  const navPlatforms: (Platform | 'All')[] = ['All', ...platformNames];
 
   return (
     <header className="sticky top-3 z-40 mx-auto w-[96%] max-w-5xl">
@@ -83,12 +89,35 @@ export const Waybar: React.FC<WaybarProps> = ({
                   </button>
                 );
               })}
+
+              {/* Manage platforms trigger button */}
+              {onOpenPlatformsModal && (
+                <button
+                  onClick={onOpenPlatformsModal}
+                  className="p-1 text-xs rounded-lg text-[var(--fg-light)] hover:text-[var(--accent)] hover:bg-[var(--selection)] transition-colors cursor-pointer"
+                  title="Add or remove platforms"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Right: Search, Add Game, Wallpaper Cycle & Theme Controls */}
+          {/* Right: Search, Add Game, Platforms & Theme Controls */}
           <div className="flex items-center gap-1.5 text-xs">
             
+            {/* Manage Platforms & Subplatforms */}
+            {onOpenPlatformsModal && (
+              <button
+                onClick={onOpenPlatformsModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--border-color)] hover:border-[var(--accent)] text-[var(--fg-light)] hover:text-[var(--fg-primary)] hover:bg-[var(--selection)] transition-colors cursor-pointer"
+                title="Manage Platforms & Subplatforms"
+              >
+                <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <span className="hidden md:inline">Platforms</span>
+              </button>
+            )}
+
             {/* Search */}
             <button
               onClick={onOpenSearchModal}

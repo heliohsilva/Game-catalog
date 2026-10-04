@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Game, Platform, PLATFORMS, OmarchyTheme } from '../types/game';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Game, Platform, PLATFORMS, OmarchyTheme, PlatformInfo } from '../types/game';
 import { 
   DEFAULT_DARK_THEME_ID, 
-  DEFAULT_LIGHT_THEME_ID, 
   getThemeById, 
   applyThemeToCss 
 } from '../data/themes';
@@ -15,11 +14,13 @@ import { ThemeSelectorModal } from '../components/ThemeSelectorModal';
 import { AddGameModal } from '../components/AddGameModal';
 import { GameDetailModal } from '../components/GameDetailModal';
 import { SearchOmnibarModal } from '../components/SearchOmnibarModal';
+import { ManagePlatformsModal } from '../components/ManagePlatformsModal';
 
 const STORAGE_KEY_THEME = 'game_catalog_theme_id_v6';
 
 export default function GameCatalogPage() {
   const [games, setGames] = useState<Game[]>([]);
+  const [platforms, setPlatforms] = useState<PlatformInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTheme, setCurrentTheme] = useState<OmarchyTheme>(() => 
     getThemeById(DEFAULT_DARK_THEME_ID)
@@ -32,13 +33,53 @@ export default function GameCatalogPage() {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isPlatformsModalOpen, setIsPlatformsModalOpen] = useState(false);
   const [inspectedGame, setInspectedGame] = useState<Game | null>(null);
   const [addPlatformPreset, setAddPlatformPreset] = useState<Platform>('PC');
 
-  // Load saved theme/wallpaper and fetch games from SQLite Backend API on mount
+  // Fetch platforms from backend API
+  const fetchPlatforms = useCallback(async () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    try {
+      const res = await fetch(`${apiUrl}/platforms`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.platforms)) {
+          setPlatforms(data.platforms);
+          return data.platforms as PlatformInfo[];
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch platforms from API:', err);
+    }
+    return [];
+  }, []);
+
+  // Fetch games from backend API
+  const fetchGames = useCallback(async () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    try {
+      const res = await fetch(`${apiUrl}/games?limit=200`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.data)) {
+          setGames(data.data);
+          return;
+        }
+      }
+      setGames([]);
+    } catch (err) {
+      console.error('Failed to fetch catalog from SQLite API:', err);
+      setGames([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load saved theme and fetch platforms & games on mount
   useEffect(() => {
     try {
-      // Clean up any legacy localStorage cached games and wallpapers
+      // Clean up legacy localStorage cached games and wallpapers
       localStorage.removeItem('game_catalog_games');
       localStorage.removeItem('game_catalog_games_v5');
       localStorage.removeItem('game_catalog_games_v6');
@@ -54,29 +95,24 @@ export default function GameCatalogPage() {
         applyThemeToCss(getThemeById(DEFAULT_DARK_THEME_ID));
       }
 
-      // Fetch dynamic catalog from SQLite Backend API
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
-      fetch(`${apiUrl}/games?limit=200`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((res) => {
-          if (res && Array.isArray(res.data)) {
-            setGames(res.data);
-          } else {
-            setGames([]);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch catalog from SQLite API:', err);
-          setGames([]);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+      fetchPlatforms();
+      fetchGames();
     } catch {
       applyThemeToCss(getThemeById(DEFAULT_DARK_THEME_ID));
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchPlatforms, fetchGames]);
+
+  // Handle platform/subcategory mutations
+  const handlePlatformsChanged = async () => {
+    const updated = await fetchPlatforms();
+    fetchGames();
+    if (selectedPlatform !== 'All' && updated.length > 0) {
+      if (!updated.some((p) => p.name === selectedPlatform)) {
+        setSelectedPlatform('All');
+      }
+    }
+  };
 
   // Theme change handler
   const handleThemeSelect = (themeId: string) => {
@@ -102,18 +138,19 @@ export default function GameCatalogPage() {
       if (res.ok) {
         const created: Game = await res.json();
         setGames((prev) => [created, ...prev]);
+        fetchPlatforms(); // Update game counts per platform
         return;
       }
     } catch (err) {
-      console.error('Error adding game to API:', err);
+      console.error('Failed to save game to API:', err);
     }
-
-    const fallbackGame: Game = {
+    // Optimistic fallback
+    const optimistic: Game = {
       ...newGameData,
-      id: `game-${Date.now()}`,
+      id: 'local-' + Date.now(),
       addedAt: new Date().toISOString(),
     };
-    setGames((prev) => [fallbackGame, ...prev]);
+    setGames((prev) => [optimistic, ...prev]);
   };
 
   // Update game
@@ -126,54 +163,52 @@ export default function GameCatalogPage() {
         body: JSON.stringify(updated),
       });
     } catch (err) {
-      console.error('Error updating game in API:', err);
+      console.error('Failed to update game on API:', err);
     }
     setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
   };
 
   // Delete game
-  const handleDeleteGame = async (id: string) => {
+  const handleDeleteGame = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
     try {
       await fetch(`${apiUrl}/games/${id}`, {
         method: 'DELETE',
       });
+      fetchPlatforms(); // Update game counts
     } catch (err) {
-      console.error('Error deleting game from API:', err);
+      console.error('Failed to delete game on API:', err);
     }
     setGames((prev) => prev.filter((g) => g.id !== id));
-    if (inspectedGame?.id === id) {
+    if (inspectedGame && inspectedGame.id === id) {
       setInspectedGame(null);
     }
   };
 
-  // Open add modal targeted for a specific platform
-  const handleOpenAddForPlatform = (platform: Platform) => {
-    setAddPlatformPreset(platform);
+  // Open add game modal with platform pre-selected
+  const handleOpenAddForPlatform = (plat: Platform) => {
+    setAddPlatformPreset(plat);
     setIsAddModalOpen(true);
   };
 
-  // Filter & Sort Logic
+  // Filtered and sorted games
   const filteredGames = useMemo(() => {
     return games
-      .filter((g) => {
-        // Platform filter
-        if (selectedPlatform !== 'All' && g.platform !== selectedPlatform) {
+      .filter((game) => {
+        if (selectedPlatform !== 'All' && game.platform !== selectedPlatform) {
           return false;
         }
-
-        // Search Query
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
-          const matchTitle = g.title.toLowerCase().includes(q);
-          const matchPlatform = g.platform.toLowerCase().includes(q);
-          const matchSub = (g.subcategory || '').toLowerCase().includes(q);
-          const matchGenre = g.genre.toLowerCase().includes(q);
-          if (!matchTitle && !matchPlatform && !matchSub && !matchGenre) {
+          const matchTitle = game.title.toLowerCase().includes(q);
+          const matchGenre = game.genre.toLowerCase().includes(q);
+          const matchSub = (game.subcategory || '').toLowerCase().includes(q);
+          const matchPlatform = game.platform.toLowerCase().includes(q);
+          if (!matchTitle && !matchGenre && !matchSub && !matchPlatform) {
             return false;
           }
         }
-
         return true;
       })
       .sort((a, b) => {
@@ -186,9 +221,18 @@ export default function GameCatalogPage() {
       });
   }, [games, selectedPlatform, searchQuery, sortBy]);
 
+  // Dynamic platforms list
+  const availablePlatformNames = useMemo(() => {
+    return platforms.length > 0 ? platforms.map((p) => p.name) : PLATFORMS;
+  }, [platforms]);
+
   // Platform clusters to display
-  const platformsToDisplay: Platform[] =
-    selectedPlatform === 'All' ? PLATFORMS : [selectedPlatform];
+  const platformsToDisplay: Platform[] = useMemo(() => {
+    if (selectedPlatform === 'All') {
+      return availablePlatformNames;
+    }
+    return [selectedPlatform];
+  }, [selectedPlatform, availablePlatformNames]);
 
   return (
     <div className="relative min-h-screen text-[var(--fg-primary)]">
@@ -206,13 +250,16 @@ export default function GameCatalogPage() {
           onThemeSelect={handleThemeSelect}
           onOpenThemeModal={() => setIsThemeModalOpen(true)}
           onOpenAddModal={() => {
-            setAddPlatformPreset('PC');
+            const firstPlat = availablePlatformNames[0] || 'PC';
+            setAddPlatformPreset(firstPlat);
             setIsAddModalOpen(true);
           }}
           onOpenSearchModal={() => setIsSearchModalOpen(true)}
+          onOpenPlatformsModal={() => setIsPlatformsModalOpen(true)}
           selectedPlatform={selectedPlatform}
           onSelectPlatform={setSelectedPlatform}
           totalGames={games.length}
+          platforms={platforms}
         />
 
         {/* Main Container */}
@@ -256,19 +303,23 @@ export default function GameCatalogPage() {
         ) : games.length === 0 ? (
           <div className="py-16 text-center hypr-glass rounded-2xl p-8 border border-[var(--border-color)]">
             <p className="font-bold text-sm text-[var(--fg-primary)]">Catalog database is empty</p>
-            <p className="font-mono text-xs text-[var(--fg-light)] mt-1">Add your first game using the "+ Add Game" button above.</p>
+            <p className="font-mono text-xs text-[var(--fg-light)] mt-1">Add your first game using the "+ Add" button above, or configure platforms using the "Platforms" menu.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {platformsToDisplay.map((platform) => {
               const gamesForPlatform = filteredGames.filter(
-                (g) => g.platform === platform
+                (g) => g.platform.toLowerCase() === platform.toLowerCase()
+              );
+              const platInfo = platforms.find(
+                (p) => p.name.toLowerCase() === platform.toLowerCase()
               );
 
               return (
                 <PlatformCluster
                   key={platform}
                   platform={platform}
+                  subcategories={platInfo?.subcategories}
                   games={gamesForPlatform}
                   onSelectGame={(g) => setInspectedGame(g)}
                   onDeleteGame={handleDeleteGame}
@@ -296,6 +347,15 @@ export default function GameCatalogPage() {
         onClose={() => setIsAddModalOpen(false)}
         onAddGame={handleAddGame}
         initialPlatform={addPlatformPreset}
+        platforms={platforms}
+      />
+
+      {/* Manage Platforms & Subplatforms Modal */}
+      <ManagePlatformsModal
+        isOpen={isPlatformsModalOpen}
+        onClose={() => setIsPlatformsModalOpen(false)}
+        platforms={platforms}
+        onPlatformsChanged={handlePlatformsChanged}
       />
 
       {/* Game Detail Modal */}
