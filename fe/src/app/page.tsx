@@ -72,6 +72,24 @@ export default function GameCatalogPage() {
           setGames(parsed);
         }
       }
+
+      // Fetch from Backend API (Golang Gin + SQLite) if available
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+      fetch(`${apiUrl}/games?limit=100`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((res) => {
+          if (res && Array.isArray(res.data) && res.data.length > 0) {
+            setGames(res.data);
+            try {
+              localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(res.data));
+            } catch {
+              // ignore
+            }
+          }
+        })
+        .catch(() => {
+          // Graceful fallback to initialGames/localStorage if API is offline
+        });
     } catch {
       applyThemeToCss(getThemeById(DEFAULT_DARK_THEME_ID));
     }
@@ -113,23 +131,57 @@ export default function GameCatalogPage() {
   };
 
   // Add game
-  const handleAddGame = (newGameData: Omit<Game, 'id' | 'addedAt'>) => {
-    const newGame: Game = {
+  const handleAddGame = async (newGameData: Omit<Game, 'id' | 'addedAt'>) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    try {
+      const res = await fetch(`${apiUrl}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGameData),
+      });
+      if (res.ok) {
+        const created: Game = await res.json();
+        saveGames([created, ...games]);
+        return;
+      }
+    } catch {
+      // Fallback to local save if API unreachable
+    }
+
+    const fallbackGame: Game = {
       ...newGameData,
       id: `game-${Date.now()}`,
       addedAt: new Date().toISOString(),
     };
-    saveGames([newGame, ...games]);
+    saveGames([fallbackGame, ...games]);
   };
 
   // Update game
-  const handleUpdateGame = (updated: Game) => {
+  const handleUpdateGame = async (updated: Game) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    try {
+      await fetch(`${apiUrl}/games/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch {
+      // ignore error, update locally
+    }
     const updatedGames = games.map((g) => (g.id === updated.id ? updated : g));
     saveGames(updatedGames);
   };
 
   // Delete game
-  const handleDeleteGame = (id: string) => {
+  const handleDeleteGame = async (id: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+    try {
+      await fetch(`${apiUrl}/games/${id}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      // ignore error, update locally
+    }
     const updatedGames = games.filter((g) => g.id !== id);
     saveGames(updatedGames);
     if (inspectedGame?.id === id) {

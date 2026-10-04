@@ -1,4 +1,4 @@
-.PHONY: all help build clean dev fe-dev fe-build api-build docker-build docker-up docker-down
+.PHONY: all help build clean clean-all dev fe-dev fe-build api-build api-dev api-test test docker-build docker-up docker-down
 
 all: fe-build
 
@@ -9,7 +9,11 @@ help:
 	@echo "  make dev          - Run frontend development server"
 	@echo "  make fe-build     - Build frontend application"
 	@echo "  make api-build    - Build backend Golang API"
-	@echo "  make clean        - Clean build artifacts (.next, dist, bin, cache)"
+	@echo "  make api-dev      - Run backend Golang API locally"
+	@echo "  make api-test     - Run backend API unit and integration tests"
+	@echo "  make test         - Run test suite"
+	@echo "  make clean        - Clean build artifacts and database files"
+	@echo "  make clean-all    - Deep clean including node_modules"
 	@echo "  make docker-build - Build Docker images"
 	@echo "  make docker-up    - Run application stack via docker-compose"
 	@echo "  make docker-down  - Stop docker-compose stack"
@@ -23,9 +27,17 @@ fe-build:
 api-build:
 	cd api && mkdir -p bin && go build -o bin/server main.go
 
+api-dev:
+	cd api && go run main.go
+
+api-test:
+	cd api && go test -v ./...
+
+test: api-test
+
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -rf fe/.next fe/out fe/.turbo api/bin
+	rm -rf fe/.next fe/out fe/.turbo api/bin api/*.db api/*.db-shm api/*.db-wal
 	@echo "Clean completed."
 
 clean-all: clean
