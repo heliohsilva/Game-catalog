@@ -1,17 +1,21 @@
-.PHONY: all help build clean clean-all dev fe-dev fe-build api-build api-dev api-test test docker-build docker-up docker-down
+.PHONY: all help build clean clean-all dev fe-dev fe-build fe-test api-build api-dev api-test test docker-build docker-up docker-down
 
-all: fe-build
+all: docker-build docker-up
+
+build: docker-build
 
 help:
 	@echo "Game Catalog Makefile"
 	@echo "Available commands:"
-	@echo "  make              - Build frontend (default)"
-	@echo "  make dev          - Run frontend development server"
-	@echo "  make fe-build     - Build frontend application"
-	@echo "  make api-build    - Build backend Golang API"
-	@echo "  make api-dev      - Run backend Golang API locally"
+	@echo "  make              - Build whole environment and start containers (docker-build + docker-up)"
+	@echo "  make build        - Build all Docker images"
+	@echo "  make test         - Run all test suites (frontend + backend)"
+	@echo "  make fe-test      - Run frontend Vitest test suite"
 	@echo "  make api-test     - Run backend API unit and integration tests"
-	@echo "  make test         - Run test suite"
+	@echo "  make fe-build     - Build frontend Next.js production bundle locally"
+	@echo "  make api-build    - Build backend Golang API binary locally"
+	@echo "  make dev          - Run frontend development server"
+	@echo "  make api-dev      - Run backend Golang API locally"
 	@echo "  make clean        - Clean build artifacts and database files"
 	@echo "  make clean-all    - Deep clean including node_modules"
 	@echo "  make docker-build - Build Docker images"
@@ -21,8 +25,14 @@ help:
 dev:
 	cd fe && npm run dev
 
+fe-dev:
+	cd fe && npm run dev
+
 fe-build:
 	cd fe && npm run build
+
+fe-test:
+	cd fe && npm test
 
 api-build:
 	cd api && mkdir -p bin && go build -o bin/server main.go
@@ -33,7 +43,7 @@ api-dev:
 api-test:
 	cd api && go test -v ./...
 
-test: api-test
+test: fe-test api-test
 
 clean:
 	@echo "Cleaning build artifacts..."

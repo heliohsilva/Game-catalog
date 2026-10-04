@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+**/.turbo
+out
+**/out
+.git
+.gitignore
+*.db
+*.db-shm
+*.db-wal
+data
+api/bin

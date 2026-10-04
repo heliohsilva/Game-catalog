@@ -8,13 +8,13 @@ COPY api/go.mod api/go.sum* ./
 RUN go mod download || true
 
 COPY api/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o server .
+RUN mkdir -p /app/bin && CGO_ENABLED=0 GOOS=linux go build -o /app/bin/server main.go
 
 FROM alpine:latest AS runner
 WORKDIR /app
 RUN mkdir -p /app/data
-COPY --from=builder /app/server .
-
+COPY --from=builder /app/bin/server /app/server
+RUN chmod +x /app/server
 
 EXPOSE 8080
-CMD ["./server"]
+CMD ["/app/server"]
