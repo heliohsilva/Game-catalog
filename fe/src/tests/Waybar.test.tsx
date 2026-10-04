@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Waybar } from '../components/Waybar';
+import { PlatformInfo } from '../types/game';
 import { OMARCHY_THEMES, DEFAULT_DARK_THEME_ID, DEFAULT_LIGHT_THEME_ID } from '../data/themes';
 
 describe('Waybar Component', () => {
@@ -114,5 +115,36 @@ describe('Waybar Component', () => {
 
     fireEvent.click(screen.getByTitle(/Browse all 22 Omarchy Themes/i));
     expect(handleThemeModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders custom added platforms with their real names rather than PC', () => {
+    const customPlatforms: PlatformInfo[] = [
+      { name: 'PC', subcategories: ['Steam'] },
+      { name: 'PlayStation', subcategories: ['PS5'] },
+      { name: 'Nintendo Switch', subcategories: ['Switch'] },
+      { name: 'Xbox', subcategories: ['Xbox Series X/S'] },
+      { name: 'Retro / Emulation', subcategories: ['PS1'] },
+      { name: 'Steam Deck', subcategories: ['Steam'] },
+      { name: 'Nintendo 64', subcategories: ['N64'] },
+    ];
+
+    render(
+      <Waybar
+        currentTheme={currentDarkTheme}
+        onThemeSelect={vi.fn()}
+        onOpenThemeModal={vi.fn()}
+        onOpenAddModal={vi.fn()}
+        onOpenSearchModal={vi.fn()}
+        selectedPlatform="All"
+        onSelectPlatform={vi.fn()}
+        totalGames={10}
+        platforms={customPlatforms}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Steam Deck' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nintendo 64' })).toBeInTheDocument();
+    const pcButtons = screen.getAllByRole('button', { name: 'PC' });
+    expect(pcButtons).toHaveLength(1);
   });
 });

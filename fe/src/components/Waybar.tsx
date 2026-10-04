@@ -73,7 +73,7 @@ export const Waybar: React.FC<WaybarProps> = ({
                   p === 'Nintendo Switch' ? 'Switch' :
                   p === 'PlayStation' ? 'PlayStation' :
                   p === 'Xbox' ? 'Xbox' :
-                  p === 'Retro / Emulation' ? 'Retro' : 'PC';
+                  p === 'Retro / Emulation' ? 'Retro' : p;
 
                 return (
                   <button

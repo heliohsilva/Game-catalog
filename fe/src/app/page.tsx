@@ -224,16 +224,41 @@ export default function GameCatalogPage() {
 
   // Dynamic platforms list
   const availablePlatformNames = useMemo(() => {
-    return platforms.length > 0 ? platforms.map((p) => p.name) : PLATFORMS;
-  }, [platforms]);
+    const fromPlatforms = platforms.length > 0 ? platforms.map((p) => p.name) : PLATFORMS;
+    const allNames = [...fromPlatforms];
+    for (const g of games) {
+      if (g.platform && !allNames.some((n) => n.toLowerCase() === g.platform.toLowerCase())) {
+        allNames.push(g.platform);
+      }
+    }
+    return allNames;
+  }, [platforms, games]);
 
-  // Platform clusters to display
+  // Helper to count games for a platform
+  const getGameCountForPlatform = useCallback((plat: string) => {
+    return games.filter((g) => g.platform.toLowerCase() === plat.toLowerCase()).length;
+  }, [games]);
+
+  // Platform clusters to display (sorted by amount of games on index, hiding platforms without games)
   const platformsToDisplay: Platform[] = useMemo(() => {
     if (selectedPlatform === 'All') {
-      return availablePlatformNames;
+      // Filter out platforms that don't have a game yet
+      const withGames = availablePlatformNames.filter((plat) => {
+        return getGameCountForPlatform(plat) > 0;
+      });
+
+      // Sort platforms in index by its amount of games (descending), then alphabetically by name
+      return withGames.sort((a, b) => {
+        const countA = getGameCountForPlatform(a);
+        const countB = getGameCountForPlatform(b);
+        if (countB !== countA) {
+          return countB - countA;
+        }
+        return a.localeCompare(b);
+      });
     }
     return [selectedPlatform];
-  }, [selectedPlatform, availablePlatformNames]);
+  }, [selectedPlatform, availablePlatformNames, getGameCountForPlatform]);
 
   return (
     <div className="relative min-h-screen text-[var(--fg-primary)]">
@@ -306,6 +331,13 @@ export default function GameCatalogPage() {
             <p className="font-bold text-sm text-[var(--fg-primary)]">Catalog database is empty</p>
             <p className="font-mono text-xs text-[var(--fg-light)] mt-1">Add your first game using the "+ Add" button above, or configure platforms using the "Platforms" menu.</p>
           </div>
+        ) : filteredGames.length === 0 && searchQuery.trim() ? (
+          <div className="py-16 text-center hypr-glass rounded-2xl p-8 border border-[var(--border-color)]">
+            <p className="font-bold text-sm text-[var(--fg-primary)]">No games found</p>
+            <p className="font-mono text-xs text-[var(--fg-light)] mt-1">
+              No games match &quot;{searchQuery}&quot;.
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
             {platformsToDisplay.map((platform) => {
@@ -315,6 +347,11 @@ export default function GameCatalogPage() {
               const platInfo = platforms.find(
                 (p) => p.name.toLowerCase() === platform.toLowerCase()
               );
+
+              // When searching, hide clusters that have no matching games
+              if (searchQuery.trim() && gamesForPlatform.length === 0) {
+                return null;
+              }
 
               return (
                 <PlatformCluster
