@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Game Catalog // Hyprland Ricing & Omarchy Themes",
   description: "A sleek game catalog and wishlist tracker inspired by Hyprland desktop ricing and pixel art aesthetics, with full 22+ Omarchy theme support.",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
