@@ -12,7 +12,6 @@ import (
 
 	"game-catalog/api/config"
 	"game-catalog/api/database"
-	"game-catalog/api/repository"
 	"game-catalog/api/server"
 )
 
@@ -27,28 +26,6 @@ func main() {
 		log.Fatalf("[FATAL] Failed to initialize SQLite database: %v", err)
 	}
 	defer db.Close()
-
-	repo := repository.NewGameRepository(db)
-
-	// Check if database needs seeding
-	if cfg.AutoSeed {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		count, err := repo.Count(ctx)
-		cancel()
-		if err != nil {
-			log.Printf("[WARN] Failed to count games in database: %v", err)
-		} else if count == 0 {
-			log.Printf("[DATABASE] Empty database detected. Seeding initial catalog games...")
-			inserted, err := database.SeedDatabase(db, false)
-			if err != nil {
-				log.Printf("[ERROR] Seeding initial games failed: %v", err)
-			} else {
-				log.Printf("[DATABASE] Successfully seeded %d initial games!", inserted)
-			}
-		} else {
-			log.Printf("[DATABASE] Database already contains %d games.", count)
-		}
-	}
 
 	router := server.SetupRouter(cfg, db)
 

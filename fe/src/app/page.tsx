@@ -16,7 +16,6 @@ import { AddGameModal } from '../components/AddGameModal';
 import { GameDetailModal } from '../components/GameDetailModal';
 import { SearchOmnibarModal } from '../components/SearchOmnibarModal';
 
-const STORAGE_KEY_GAMES = 'game_catalog_games_v6';
 const STORAGE_KEY_THEME = 'game_catalog_theme_id_v6';
 const STORAGE_KEY_WALLPAPER = 'game_catalog_wallpaper_v6';
 
@@ -45,9 +44,14 @@ export default function GameCatalogPage() {
   const [inspectedGame, setInspectedGame] = useState<Game | null>(null);
   const [addPlatformPreset, setAddPlatformPreset] = useState<Platform>('PC');
 
-  // Load saved state and fetch games from SQLite Backend API on mount
+  // Load saved theme/wallpaper and fetch games from SQLite Backend API on mount
   useEffect(() => {
     try {
+      // Clean up any legacy localStorage cached games so browser never shows stale mock data
+      localStorage.removeItem('game_catalog_games');
+      localStorage.removeItem('game_catalog_games_v5');
+      localStorage.removeItem('game_catalog_games_v6');
+
       const savedThemeId = localStorage.getItem(STORAGE_KEY_THEME);
       if (savedThemeId) {
         const t = getThemeById(savedThemeId);
@@ -65,34 +69,20 @@ export default function GameCatalogPage() {
         }
       }
 
-      const savedGames = localStorage.getItem(STORAGE_KEY_GAMES);
-      if (savedGames) {
-        try {
-          const parsed = JSON.parse(savedGames);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setGames(parsed);
-          }
-        } catch {
-          // ignore cache parse error
-        }
-      }
-
-      // Fetch dynamic catalog from Backend API (Golang Gin + SQLite)
+      // Fetch dynamic catalog from SQLite Backend API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
       fetch(`${apiUrl}/games?limit=200`)
         .then((res) => (res.ok ? res.json() : null))
         .then((res) => {
           if (res && Array.isArray(res.data)) {
             setGames(res.data);
-            try {
-              localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(res.data));
-            } catch {
-              // ignore storage quota error
-            }
+          } else {
+            setGames([]);
           }
         })
         .catch((err) => {
           console.error('Failed to fetch catalog from SQLite API:', err);
+          setGames([]);
         })
         .finally(() => {
           setIsLoading(false);
@@ -128,16 +118,6 @@ export default function GameCatalogPage() {
     });
   };
 
-  // Save games helper
-  const saveGames = (updatedGames: Game[]) => {
-    setGames(updatedGames);
-    try {
-      localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(updatedGames));
-    } catch {
-      // ignore
-    }
-  };
-
   // Add game
   const handleAddGame = async (newGameData: Omit<Game, 'id' | 'addedAt'>) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
@@ -149,11 +129,11 @@ export default function GameCatalogPage() {
       });
       if (res.ok) {
         const created: Game = await res.json();
-        saveGames([created, ...games]);
+        setGames((prev) => [created, ...prev]);
         return;
       }
-    } catch {
-      // Fallback to local save if API unreachable
+    } catch (err) {
+      console.error('Error adding game to API:', err);
     }
 
     const fallbackGame: Game = {
@@ -161,7 +141,7 @@ export default function GameCatalogPage() {
       id: `game-${Date.now()}`,
       addedAt: new Date().toISOString(),
     };
-    saveGames([fallbackGame, ...games]);
+    setGames((prev) => [fallbackGame, ...prev]);
   };
 
   // Update game
@@ -173,11 +153,10 @@ export default function GameCatalogPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
-    } catch {
-      // ignore error, update locally
+    } catch (err) {
+      console.error('Error updating game in API:', err);
     }
-    const updatedGames = games.map((g) => (g.id === updated.id ? updated : g));
-    saveGames(updatedGames);
+    setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
   };
 
   // Delete game
@@ -187,11 +166,10 @@ export default function GameCatalogPage() {
       await fetch(`${apiUrl}/games/${id}`, {
         method: 'DELETE',
       });
-    } catch {
-      // ignore error, update locally
+    } catch (err) {
+      console.error('Error deleting game from API:', err);
     }
-    const updatedGames = games.filter((g) => g.id !== id);
-    saveGames(updatedGames);
+    setGames((prev) => prev.filter((g) => g.id !== id));
     if (inspectedGame?.id === id) {
       setInspectedGame(null);
     }
@@ -318,7 +296,7 @@ export default function GameCatalogPage() {
           <div className="py-16 text-center hypr-glass rounded-2xl p-8 border border-[var(--border-color)]">
             <div className="flex flex-col items-center justify-center gap-3">
               <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-              <p className="font-mono text-xs text-[var(--fg-light)]">Loading game catalog from database...</p>
+              <p className="font-mono text-xs text-[var(--fg-light)]">Connecting to catalog database...</p>
             </div>
           </div>
         ) : games.length === 0 ? (
