@@ -1,0 +1,4 @@
+#!/bin/bash
+## Make a dump of a .sqlite db to a .sql text file 
+
+sqlite3 game_catalog.sqlite .dump > game_catalog.sql

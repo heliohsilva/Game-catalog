@@ -11,5 +11,4 @@ out
 *.db
 *.db-shm
 *.db-wal
-data
 api/bin

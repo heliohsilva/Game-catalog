@@ -70,23 +70,48 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		}
 	}
 
+	dotSQLPath := "game_catalog.sql"
+
+	if err := loadFrom(db, dotSQLPath); err != nil{
+		fmt.Printf("Not possible to load db from .sql file: %v", err)
+
+		if err := runMigrations(db); err != nil{
+			return nil, fmt.Errorf("Cannot perform migrations: %w", err)
+		}
+	}
+
+	return db, nil
+}
+
+func loadFrom(db *sql.DB, path string) error {
+	dbBytes, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("File not found")
+	}
+
+	_, err = db.Exec(string(dbBytes))
+
+	return err
+}
+
+func runMigrations(db *sql.DB) error {
 	// Run migrations
 	if err := migrate(db); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("database migration failed: %w", err)
+		return fmt.Errorf("database migration failed: %w", err)
 	}
 
 	if err := seedDefaultPlatforms(db); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("default platform seeding failed: %w", err)
+		return fmt.Errorf("default platform seeding failed: %w", err)
 	}
 
 	if err := SyncDynamicPlatforms(db); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("platform sync failed: %w", err)
+		return fmt.Errorf("platform sync failed: %w", err)
 	}
 
-	return db, nil
+	return nil
 }
 
 func migrate(db *sql.DB) error {

@@ -12,7 +12,13 @@ RUN mkdir -p /app/bin && CGO_ENABLED=0 GOOS=linux go build -o /app/bin/server ma
 
 FROM alpine:latest AS runner
 WORKDIR /app
+
+RUN apk add --no-cache bash sqlite
+
 RUN mkdir -p /app/data
+COPY data/ /app/data
+RUN chmod +x /app/data/sql*
+
 COPY --from=builder /app/bin/server /app/server
 RUN chmod +x /app/server
 
